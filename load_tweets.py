@@ -5,9 +5,10 @@ Tweet Loader Driver Program- Reads tweets from a CSV file and inserts them into 
 Author: Ruhan Bhakta
 
 Successfully loaded:    1000000
-Failed to load:         0
-Time elapsed:           480.06 seconds
-Loading rate:           2083.08 tweets/second
+Time elapsed:           131.27 seconds
+Loading rate:           7617.63 tweets/second
+post_tweet calls/sec:   7617.62
+Database connection closed
 """
 
 import csv
@@ -54,11 +55,9 @@ class TweetLoader:
                 self.tweets_loaded += 1
             else:
                 self.tweets_failed += 1
+            # Report updates for every 10,000 tweets loaded
             if i % 10000 == 0:
                 print(f"  Processed {i} tweets...")
-
-        # Commit at the end
-        self.db_api.commit()
 
         elapsed_time = time.time() - start_time
         self._print_results(elapsed_time)
@@ -66,7 +65,7 @@ class TweetLoader:
 
     def _print_results(self, elapsed_time: float) -> None:
         """
-        Print loading results.
+        Print loading results, and profiling stats
         """
         total = self.tweets_loaded + self.tweets_failed
 
@@ -78,6 +77,10 @@ class TweetLoader:
             rate = self.tweets_loaded / elapsed_time
             print(f"Loading rate:           {rate:.2f} tweets/second")
             print(f"Average time per tweet: {(elapsed_time / total * 1000):.2f} ms")
+
+            # Print post_tweet profiling from API
+            api_stats = self.db_api.get_profile_stats()
+            print(f"post_tweet calls/sec:   {api_stats['calls_per_sec']:.2f}")
 
 def main():
     DB_CONFIG = {

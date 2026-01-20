@@ -4,7 +4,7 @@ filename: load_tweets.py
 Twitter Database API- Interacts with DB to make driver functions DB agnostic
 author: Ruhan Bhakta
 """
-
+import time
 import mysql.connector
 from mysql.connector import Error
 from typing import Optional
@@ -21,6 +21,10 @@ class TwitterAPI:
 
         self.connection = None
         self.cursor = None
+
+        # Profiling
+        self.profile_call_count = 0
+        self.profile_start_time = None
 
         # Prepare query
         self._insert_tweet_sql = (
@@ -40,6 +44,10 @@ class TwitterAPI:
 
             # Reuse a single cursor for all inserts
             self.cursor = self.connection.cursor()
+
+            # Start profiling
+            self.profile_start_time = time.time()
+            self.profile_call_count = 0
 
             print(f"Successfully connected to database '{self.database}'")
             return True
@@ -70,6 +78,7 @@ class TwitterAPI:
             self.cursor.execute(
                 self._insert_tweet_sql, (user_id, tweet_text)
             )
+            self.profile_call_count += 1
             return self.cursor.lastrowid
 
         except Error:
@@ -92,3 +101,18 @@ class TwitterAPI:
             return True
         except Error:
             return False
+
+    def get_profile_stats(self) -> dict:
+        """
+        Get profiling statistics for post_tweet calls.
+        """
+        if self.profile_start_time is None:
+            return {"calls_per_sec": 0.0, "total_calls": 0}
+
+        elapsed = time.time() - self.profile_start_time
+        calls_per_sec = self.profile_call_count / elapsed if elapsed > 0 else 0.0
+
+        return {
+            "calls_per_sec": calls_per_sec,
+            "total_calls": self.profile_call_count
+        }
