@@ -124,8 +124,8 @@ class TimelineRetriever:
 
         if elapsed_time > 0 and self.timelines_retrieved > 0:
             # Print timeline profiling from API
-            api_stats = self.db_api.get_profile_stats()
-            print(f"Timeline calls/sec:      {api_stats['timeline_calls_per_sec']:.2f}")
+            api_stats = self.db_api.get_profile_stats("timeline")
+            print(f"Timeline calls/sec:      {api_stats['calls_per_sec']:.2f}")
 
         print(f"{'=' * 50}")
 
@@ -141,7 +141,7 @@ def main():
     }
 
     # Configuration
-    NUM_RETRIEVALS = 350  # Number of timelines to retrieve
+    NUM_RETRIEVALS = 5000
 
     # Connect to database
     db_api = TwitterAPI(**DB_CONFIG)

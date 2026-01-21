@@ -72,12 +72,9 @@ class TweetLoader:
         print(f"Time elapsed:           {elapsed_time:.2f} seconds")
 
         if elapsed_time > 0:
-            rate = self.tweets_loaded / elapsed_time
-            print(f"Loading rate:           {rate:.2f} tweets/second")
-            print(f"Average time per tweet: {(elapsed_time / total * 1000):.2f} ms")
 
             # Print post_tweet profiling from API
-            api_stats = self.db_api.get_profile_stats()
+            api_stats = self.db_api.get_profile_stats("post_tweet")
             print(f"post_tweet calls/sec:   {api_stats['calls_per_sec']:.2f}")
 
 def main():

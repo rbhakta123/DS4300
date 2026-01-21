@@ -202,25 +202,25 @@ class TwitterAPI:
         except Error:
             return False
 
-    def get_profile_stats(self) -> dict:
+    def get_profile_stats(self, call_type: str) -> dict:
         """
-        Get profiling statistics for API calls.
+        Get profiling statistics for API calls
         """
         if self.profile_start_time is None:
-            return {
-                "calls_per_sec": 0.0,
-                "total_calls": 0,
-                "timeline_calls": 0,
-                "timeline_calls_per_sec": 0.0
-            }
+            return {"calls_per_sec": 0.0, "total_calls": 0}
 
         elapsed = time.time() - self.profile_start_time
-        calls_per_sec = self.profile_call_count / elapsed if elapsed > 0 else 0.0
-        timeline_calls_per_sec = self.timeline_call_count / elapsed if elapsed > 0 else 0.0
+        if elapsed <= 0:
+            return {"calls_per_sec": 0.0, "total_calls": 0}
+
+        if call_type == "timeline":
+            calls = self.timeline_call_count
+        elif call_type == "post_tweet":
+            calls = self.profile_call_count
+        else:
+            raise ValueError("call_type must be 'timeline' or 'post_tweet'")
 
         return {
-            "calls_per_sec": calls_per_sec,
-            "total_calls": self.profile_call_count,
-            "timeline_calls": self.timeline_call_count,
-            "timeline_calls_per_sec": timeline_calls_per_sec
+            "calls_per_sec": calls / elapsed,
+            "total_calls": calls,
         }
