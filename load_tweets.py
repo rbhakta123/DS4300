@@ -6,9 +6,7 @@ Author: Ruhan Bhakta
 
 Successfully loaded:    1000000
 Time elapsed:           131.27 seconds
-Loading rate:           7617.63 tweets/second
 post_tweet calls/sec:   7617.62
-Database connection closed
 """
 
 import csv

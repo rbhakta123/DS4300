@@ -1,16 +1,31 @@
 """
-DS 4300 HW 1
-filename: load_tweets.py
-Twitter Database API- Interacts with DB to make driver functions DB agnostic
-author: Ruhan Bhakta
+DS 4300 HW 1 Extension
+filename: twitter_api_extended.py
+Extended Twitter Database API with timeline retrieval functionality
+Author: Ruhan Bhakta
 """
 import time
 import mysql.connector
 from mysql.connector import Error
-from typing import Optional
+from typing import Optional, List, Dict
+from dataclasses import dataclass
+from datetime import datetime
+
+
+@dataclass
+class Tweet:
+    """Data class representing a tweet"""
+    tweet_id: int
+    user_id: int
+    tweet_ts: datetime
+    tweet_text: str
+
+    def __repr__(self):
+        return f"Tweet(id={self.tweet_id}, user={self.user_id}, ts={self.tweet_ts}, text='{self.tweet_text[:30]}...')"
+
 
 class TwitterAPI:
-    """API for Twitter database operations"""
+    """Extended API for Twitter database operations with timeline support"""
 
     def __init__(self, host: str, user: str, password: str, database: str, autocommit: bool = False):
         self.host = host
@@ -19,17 +34,42 @@ class TwitterAPI:
         self.database = database
         self.autocommit = autocommit
 
+        # For quicker picking of random users, get min and max follower ids
+        self.min_follower_id = None
+        self.max_follower_id = None
+
         self.connection = None
         self.cursor = None
 
         # Profiling
         self.profile_call_count = 0
         self.profile_start_time = None
+        self.timeline_call_count = 0
 
-        # Prepare query
+        # Prepared queries
         self._insert_tweet_sql = (
             "INSERT INTO TWEET (user_id, tweet_text) VALUES (%s, %s)"
         )
+
+        # Get the 10 most recent tweets from all users followed by the given user_id
+        self._get_timeline_sql = """
+            SELECT t.tweet_id, t.user_id, t.tweet_ts, t.tweet_text
+            FROM TWEET t
+            INNER JOIN FOLLOWS f ON t.user_id = f.followee_id
+            WHERE f.follower_id = %s
+            ORDER BY t.tweet_ts DESC
+            LIMIT 10
+        """
+
+        # Query to get a random user who's following at least one other user
+        self._get_random_user_sql = """
+        SELECT follower_id
+        FROM FOLLOWS
+        WHERE follower_id >= FLOOR(
+                RAND() * (%s - %s + 1) + %s
+                             )
+        ORDER BY follower_id LIMIT 1
+        """
 
     def connect(self) -> bool:
         """Establish connection to the database."""
@@ -42,12 +82,21 @@ class TwitterAPI:
                 autocommit=self.autocommit,
             )
 
-            # Reuse a single cursor for all inserts
+            # Reuse a single cursor for all operations
             self.cursor = self.connection.cursor()
+
+            # Cache follower_id bounds for quicker random id generation
+            self.cursor.execute(
+                "SELECT MIN(follower_id), MAX(follower_id) FROM FOLLOWS"
+            )
+            row = self.cursor.fetchone()
+            self.min_follower_id = row[0]
+            self.max_follower_id = row[1]
 
             # Start profiling
             self.profile_start_time = time.time()
             self.profile_call_count = 0
+            self.timeline_call_count = 0
 
             print(f"Successfully connected to database '{self.database}'")
             return True
@@ -84,6 +133,57 @@ class TwitterAPI:
         except Error:
             return None
 
+    def get_home_timeline(self, user_id: int) -> Optional[List[Tweet]]:
+        """
+        Retrieve the home timeline for a given user.
+        """
+        try:
+            self.cursor.execute(self._get_timeline_sql, (user_id,))
+            rows = self.cursor.fetchall()
+
+            self.timeline_call_count += 1
+
+            # Convert rows to Tweet objects
+            tweets = []
+            for row in rows:
+                tweet = Tweet(
+                    tweet_id=row[0],
+                    user_id=row[1],
+                    tweet_ts=row[2],
+                    tweet_text=row[3]
+                )
+                tweets.append(tweet)
+
+            return tweets
+
+        except Error as e:
+            print(f"Error retrieving timeline: {e}")
+            return None
+
+    def get_random_user(self) -> Optional[int]:
+        """
+        Get a random user ID who follows at least one other user.
+        Database-specific implementation, API-level abstraction.
+        """
+        if self.min_follower_id is None or self.max_follower_id is None:
+            return None
+
+        try:
+            self.cursor.execute(
+                self._get_random_user_sql,
+                (
+                    self.max_follower_id,
+                    self.min_follower_id,
+                    self.min_follower_id
+                )
+            )
+            row = self.cursor.fetchone()
+            return row[0] if row else None
+
+        except Error as e:
+            print(f"Error getting random user: {e}")
+            return None
+
     def is_connected(self) -> bool:
         """Check if database connection is active."""
         return (
@@ -104,15 +204,23 @@ class TwitterAPI:
 
     def get_profile_stats(self) -> dict:
         """
-        Get profiling statistics for post_tweet calls.
+        Get profiling statistics for API calls.
         """
         if self.profile_start_time is None:
-            return {"calls_per_sec": 0.0, "total_calls": 0}
+            return {
+                "calls_per_sec": 0.0,
+                "total_calls": 0,
+                "timeline_calls": 0,
+                "timeline_calls_per_sec": 0.0
+            }
 
         elapsed = time.time() - self.profile_start_time
         calls_per_sec = self.profile_call_count / elapsed if elapsed > 0 else 0.0
+        timeline_calls_per_sec = self.timeline_call_count / elapsed if elapsed > 0 else 0.0
 
         return {
             "calls_per_sec": calls_per_sec,
-            "total_calls": self.profile_call_count
+            "total_calls": self.profile_call_count,
+            "timeline_calls": self.timeline_call_count,
+            "timeline_calls_per_sec": timeline_calls_per_sec
         }
