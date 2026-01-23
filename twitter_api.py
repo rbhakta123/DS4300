@@ -34,9 +34,9 @@ class TwitterAPI:
         self.database = database
         self.autocommit = autocommit
 
-        # For quicker picking of random users, get min and max follower ids
-        self.min_follower_id = None
-        self.max_follower_id = None
+        # For quicker picking of random users, get min and max user ids
+        self.min_user_id = None
+        self.max_user_id = None
 
         self.connection = None
         self.cursor = None
@@ -51,25 +51,23 @@ class TwitterAPI:
             "INSERT INTO TWEET (user_id, tweet_text) VALUES (%s, %s)"
         )
 
-        # Get the 10 most recent tweets from all users followed by the given user_id
         self._get_timeline_sql = """
-            SELECT t.tweet_id, t.user_id, t.tweet_ts, t.tweet_text
-            FROM TWEET t
-            INNER JOIN FOLLOWS f ON t.user_id = f.followee_id
-            WHERE f.follower_id = %s
-            ORDER BY t.tweet_ts DESC
-            LIMIT 10
-        """
+                                 SELECT t.tweet_id, t.user_id, t.tweet_ts, t.tweet_text
+                                 FROM TWEET t
+                                          INNER JOIN FOLLOWS f ON t.user_id = f.followee_id
+                                 WHERE f.follower_id = %s
+                                 ORDER BY t.tweet_ts DESC LIMIT 10 \
+                                 """
 
-        # Query to get a random user who's following at least one other user
+        # Query to get a random user from either TWEET or FOLLOWS table
         self._get_random_user_sql = """
-        SELECT follower_id
-        FROM FOLLOWS
-        WHERE follower_id >= FLOOR(
-                RAND() * (%s - %s + 1) + %s
-                             )
-        ORDER BY follower_id LIMIT 1
-        """
+                                    SELECT DISTINCT user_id
+                                    FROM TWEET
+                                    WHERE user_id >= FLOOR(
+                                            RAND() * (%s - %s + 1) + %s
+                                                     )
+                                    ORDER BY user_id LIMIT 1 \
+                                    """
 
     def connect(self) -> bool:
         """Establish connection to the database."""
@@ -85,13 +83,13 @@ class TwitterAPI:
             # Reuse a single cursor for all operations
             self.cursor = self.connection.cursor()
 
-            # Cache follower_id bounds for quicker random id generation
+            # Cache user_id bounds for quicker random id generation
             self.cursor.execute(
-                "SELECT MIN(follower_id), MAX(follower_id) FROM FOLLOWS"
+                "SELECT MIN(user_id), MAX(user_id) FROM TWEET"
             )
             row = self.cursor.fetchone()
-            self.min_follower_id = row[0]
-            self.max_follower_id = row[1]
+            self.min_user_id = row[0]
+            self.max_user_id = row[1]
 
             # Start profiling
             self.profile_start_time = time.time()
@@ -135,7 +133,7 @@ class TwitterAPI:
 
     def get_home_timeline(self, user_id: int) -> Optional[List[Tweet]]:
         """
-        Retrieve the home timeline for a given user.
+        Retrieve the home timeline for a given user. Returns a list of Tweet objects.
         """
         try:
             self.cursor.execute(self._get_timeline_sql, (user_id,))
@@ -162,19 +160,19 @@ class TwitterAPI:
 
     def get_random_user(self) -> Optional[int]:
         """
-        Get a random user ID who follows at least one other user.
+        Get a random user ID from the TWEET table.
         Database-specific implementation, API-level abstraction.
         """
-        if self.min_follower_id is None or self.max_follower_id is None:
+        if self.min_user_id is None or self.max_user_id is None:
             return None
 
         try:
             self.cursor.execute(
                 self._get_random_user_sql,
                 (
-                    self.max_follower_id,
-                    self.min_follower_id,
-                    self.min_follower_id
+                    self.max_user_id,
+                    self.min_user_id,
+                    self.min_user_id
                 )
             )
             row = self.cursor.fetchone()

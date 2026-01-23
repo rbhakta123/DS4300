@@ -1,28 +1,13 @@
 """
-DS 4300 HW 1 Extension
+DS 4300 HW 1
 filename: retrieve_timelines.py
-Timeline Retrieval Driver Program - Repeatedly retrieves home timelines for random users
+Timeline Retrieval Driver Program - Retrieves home timelines for random users
 Author: Ruhan Bhakta
-
-Example output:
-Starting timeline retrieval...
-  Retrieved 100 timelines...
-  Retrieved 200 timelines...
-  ...
-Successfully retrieved:  1000
-Failed retrievals:       0
-Empty timelines:         23
-Time elapsed:            12.45 seconds
-Retrieval rate:          80.32 timelines/second
-Avg tweets per timeline: 9.77
-Timeline calls/sec:      80.32
-Database connection closed
 """
 
 import time
 from typing import Tuple, Optional
 from twitter_api import TwitterAPI, Tweet
-
 
 class TimelineRetriever:
     """Driver class for retrieving user home timelines from the database"""
@@ -34,18 +19,10 @@ class TimelineRetriever:
         self.empty_timelines = 0
         self.total_tweets = 0
 
-    def retrieve_timelines(
-            self,
-            num_retrievals: int
-    ) -> Tuple[int, int, int, float]:
+    def retrieve_timelines(self, num_retrievals: int) -> Tuple[int, int, int, float]:
         """
-        Retrieve home timelines for random users.
-
-        Args:
-            num_retrievals: Number of timelines to retrieve
-
-        Returns:
-            Tuple of (successful_retrievals, failed_retrievals, empty_timelines, elapsed_time)
+        Retrieve home timelines for random users. Returns a tuple of
+        (successful_retrievals, failed_retrievals, empty_timelines, elapsed_time)
         """
         print(f"Starting timeline retrieval for {num_retrievals} random users...")
 
@@ -68,7 +45,7 @@ class TimelineRetriever:
                 self.timelines_failed += 1
                 continue
 
-            # Retrieve their home timeline
+            # Retrieve their home timeline using api call
             timeline = self.db_api.get_home_timeline(user_id)
 
             if timeline is None:
@@ -88,29 +65,6 @@ class TimelineRetriever:
         self._print_results(elapsed_time)
         return self.timelines_retrieved, self.timelines_failed, self.empty_timelines, elapsed_time
 
-    def retrieve_specific_user_timeline(self, user_id: int) -> None:
-        """
-        Retrieve and display the home timeline for a specific user.
-
-        Args:
-            user_id: The user ID to retrieve timeline for
-        """
-        print(f"\nRetrieving timeline for user {user_id}...")
-
-        timeline = self.db_api.get_home_timeline(user_id)
-
-        if timeline is None:
-            print(f"  Error: Failed to retrieve timeline for user {user_id}")
-            return
-
-        if len(timeline) == 0:
-            print(f"  User {user_id} has an empty timeline (follows no one or followees have no tweets)")
-            return
-
-        print(f"  Found {len(timeline)} tweets in timeline:")
-        for idx, tweet in enumerate(timeline, 1):
-            print(f"    {idx}. [{tweet.tweet_ts}] User {tweet.user_id}: {tweet.tweet_text[:60]}...")
-
     def _print_results(self, elapsed_time: float) -> None:
         """
         Print retrieval results and profiling stats
@@ -125,10 +79,7 @@ class TimelineRetriever:
         if elapsed_time > 0 and self.timelines_retrieved > 0:
             # Print timeline profiling from API
             api_stats = self.db_api.get_profile_stats("timeline")
-            print(f"Timeline calls/sec:      {api_stats['calls_per_sec']:.2f}")
-
-        print(f"{'=' * 50}")
-
+            print(f"retrieve_timeline calls/sec:      {api_stats['calls_per_sec']:.2f}")
 
 def main():
     """Main driver function"""
@@ -137,11 +88,11 @@ def main():
         "user": "ruhan",
         "password": "abc123",
         "database": "twitter",
-        "autocommit": True,  # Read-only operations, autocommit is fine
+        "autocommit": True
     }
 
     # Configuration
-    NUM_RETRIEVALS = 5000
+    NUM_RETRIEVALS = 10000
 
     # Connect to database
     db_api = TwitterAPI(**DB_CONFIG)
@@ -152,11 +103,6 @@ def main():
 
     try:
         retriever = TimelineRetriever(db_api)
-
-        # Example: Retrieve timeline for a specific user
-        # Uncomment the line below to see a detailed timeline for user 1
-        # retriever.retrieve_specific_user_timeline(1)
-
         # Main retrieval loop
         retriever.retrieve_timelines(NUM_RETRIEVALS)
 
