@@ -4,15 +4,23 @@ filename: load_tweets.py
 Tweet Loader Driver Program- Reads tweets from a CSV file and inserts them into the database
 Author: Ruhan Bhakta
 
+Stats:
 Successfully loaded:    1000000
 Time elapsed:           131.27 seconds
 post_tweet calls/sec:   7617.62
 """
-
+import os
 import csv
 import time
 from typing import Tuple
 from twitter_api import TwitterAPI
+
+# Load environment variables from .env file if it exists
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
 
 class TweetLoader:
     """Driver class for loading tweets into a database table"""
@@ -80,8 +88,8 @@ class TweetLoader:
 def main():
     DB_CONFIG = {
         "host": "localhost",
-        "user": "ruhan",
-        "password": "abc123",
+        "user": os.getenv("DB_USER"),
+        "password": os.getenv("DB_PASSWORD"),
         "database": "twitter",
         "autocommit": False,
     }

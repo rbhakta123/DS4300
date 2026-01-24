@@ -1,13 +1,27 @@
 """
 DS 4300 HW 1
 filename: retrieve_timelines.py
-Timeline Retrieval Driver Program - Retrieves home timelines for random users
+Timeline Timeline retrieval Driver - Retrieves home timelines for specified number of random users
 Author: Ruhan Bhakta
-"""
 
+Stats:
+Successfully retrieved:  10000
+Failed retrievals:       0
+Time elapsed:            15.56 seconds
+retrieve_timelines calls/sec:      642.68
+
+"""
+import os
 import time
 from typing import Tuple, Optional
 from twitter_api import TwitterAPI, Tweet
+
+# Load environment variables from .env file if it exists
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
 
 class TimelineRetriever:
     """Driver class for retrieving user home timelines from the database"""
@@ -85,8 +99,8 @@ def main():
     """Main driver function"""
     DB_CONFIG = {
         "host": "localhost",
-        "user": "ruhan",
-        "password": "abc123",
+        "user": os.getenv("DB_USER"),
+        "password": os.getenv("DB_PASSWORD"),
         "database": "twitter",
         "autocommit": True
     }
