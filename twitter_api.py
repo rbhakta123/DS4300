@@ -1,7 +1,7 @@
 """
-DS 4300 HW 1 Extension
-filename: twitter_api_extended.py
-Extended Twitter Database API with timeline retrieval functionality
+DS 4300 HW 1
+filename: twitter_api.py
+API to interact with MySQL Twitter database. Used in load_tweets.py and retrieve_timelines.py.
 Author: Ruhan Bhakta
 """
 import time
@@ -32,11 +32,14 @@ class TwitterAPI:
         self.password = password
         self.database = database
         self.autocommit = autocommit
+
         # For quicker picking of random users, store min and max user ids
         self.min_user_id = None
         self.max_user_id = None
+
         self.connection = None
         self.cursor = None
+
         # Profiling
         self.profile_call_count = 0
         self.profile_start_time = None
@@ -50,7 +53,7 @@ class TwitterAPI:
         self._get_timeline_sql = """
                                  SELECT t.tweet_id, t.user_id, t.tweet_ts, t.tweet_text
                                  FROM TWEET t
-                                          INNER JOIN FOLLOWS f ON t.user_id = f.followee_id
+                                      INNER JOIN FOLLOWS f ON t.user_id = f.followee_id
                                  WHERE f.follower_id = %s
                                  ORDER BY t.tweet_ts DESC LIMIT 10 \
                                  """
@@ -59,9 +62,7 @@ class TwitterAPI:
         self._get_random_user_sql = """
                                     SELECT DISTINCT user_id
                                     FROM TWEET
-                                    WHERE user_id >= FLOOR(
-                                            RAND() * (%s - %s + 1) + %s
-                                                     )
+                                    WHERE user_id >= FLOOR(RAND() * (%s - %s + 1) + %s)
                                     ORDER BY user_id LIMIT 1 \
                                     """
 
@@ -112,9 +113,7 @@ class TwitterAPI:
             pass
 
     def post_tweet(self, user_id: int, tweet_text: str) -> Optional[int]:
-        """
-        Insert a single tweet into the database.
-        """
+        """Insert a single tweet into the database"""
         try:
             self.cursor.execute(
                 self._insert_tweet_sql, (user_id, tweet_text)
@@ -151,8 +150,7 @@ class TwitterAPI:
             return None
 
     def get_random_user(self) -> Optional[int]:
-        """
-        Get a random user ID from the Tweet table"""
+        """Get a random user ID"""
         if self.min_user_id is None or self.max_user_id is None:
             return None
 
@@ -173,14 +171,14 @@ class TwitterAPI:
             return None
 
     def is_connected(self) -> bool:
-        """Check if database connection is active."""
+        """Check if database connection is active"""
         return (
             self.connection is not None
             and self.connection.is_connected()
         )
 
     def commit(self) -> bool:
-        """Commit pending transactions. """
+        """Commit pending transactions"""
         try:
             if self.connection and not self.autocommit:
                 self.connection.commit()
@@ -191,11 +189,11 @@ class TwitterAPI:
     def get_profile_stats(self, call_type: str) -> dict:
         """Get profiling statistics for API calls"""
         if self.profile_start_time is None:
-            return {"calls_per_sec": 0.0, "total_calls": 0}
+            return {"calls_per_sec": 0.0, "total_calls": 0, "elapsed_time": 0.0}
 
         elapsed = time.time() - self.profile_start_time
         if elapsed <= 0:
-            return {"calls_per_sec": 0.0, "total_calls": 0}
+            return {"calls_per_sec": 0.0, "total_calls": 0, "elapsed_time": 0.0}
 
         if call_type == "timeline":
             calls = self.timeline_call_count
@@ -207,4 +205,5 @@ class TwitterAPI:
         return {
             "calls_per_sec": calls / elapsed,
             "total_calls": calls,
+            "elapsed_time": elapsed,
         }

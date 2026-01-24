@@ -1,7 +1,8 @@
 """
 DS 4300 HW 1
 filename: load_tweets.py
-Tweet Loader Driver Program- Reads tweets from a CSV file and inserts them into the database
+Tweet Loader Driver Program- Reads tweets from a CSV file and inserts them into the database. Uses twitter_api.py to
+interact with the database
 Author: Ruhan Bhakta
 
 Stats:
@@ -31,9 +32,7 @@ class TweetLoader:
         self.tweets_failed = 0
 
     def read_tweets_from_csv(self, filename: str):
-        """
-        Reads in tweets from a CSV file.
-        """
+        """Reads in tweets from a CSV file"""
         with open(filename, "r", encoding="utf-8", newline="") as f:
             reader = csv.reader(f)
             # skip header row
@@ -43,9 +42,7 @@ class TweetLoader:
                 yield int(user_id), tweet_text
 
     def load_tweets(self, filename: str) -> Tuple[int, int, float]:
-        """
-        Load tweets into database one at a time.
-        """
+        """Load tweets into database one at a time"""
         print(f"Starting tweet loading from: {filename}")
 
         self.tweets_loaded = 0
@@ -53,7 +50,6 @@ class TweetLoader:
         if not self.db_api.is_connected():
             print("Error: Not connected to database")
             return 0, 0, 0.0
-        start_time = time.time()
         print("Inserting tweets into database")
         for i, (user_id, tweet_text) in enumerate(self.read_tweets_from_csv(filename), 1):
             result = self.db_api.post_tweet(user_id, tweet_text)
@@ -65,25 +61,19 @@ class TweetLoader:
             if i % 10000 == 0:
                 print(f"  Processed {i} tweets...")
 
-        elapsed_time = time.time() - start_time
-        self._print_results(elapsed_time)
-        return self.tweets_loaded, self.tweets_failed, elapsed_time
+        self._print_results()
+        return self.tweets_loaded, self.tweets_failed, self.db_api.get_profile_stats("post_tweet")['elapsed_time']
 
-    def _print_results(self, elapsed_time: float) -> None:
-        """
-        Print loading results, and profiling stats
-        """
-        total = self.tweets_loaded + self.tweets_failed
+    def _print_results(self) -> None:
+        """Print loading results, and profiling stats"""
 
         print(f"Successfully loaded:    {self.tweets_loaded}")
         print(f"Failed to load:         {self.tweets_failed}")
-        print(f"Time elapsed:           {elapsed_time:.2f} seconds")
 
-        if elapsed_time > 0:
-
-            # Print post_tweet profiling from API
-            api_stats = self.db_api.get_profile_stats("post_tweet")
-            print(f"post_tweet calls/sec:   {api_stats['calls_per_sec']:.2f}")
+        # Print profiling from API
+        api_stats = self.db_api.get_profile_stats("post_tweet")
+        print(f"Time elapsed: {api_stats['elapsed_time']:.2f} seconds")
+        print(f"post_tweet calls/sec: {api_stats['calls_per_sec']:.2f}")
 
 def main():
     DB_CONFIG = {
