@@ -11,7 +11,6 @@ from typing import Optional, List, Dict
 from dataclasses import dataclass
 from datetime import datetime
 
-
 @dataclass
 class Tweet:
     """Data class representing a tweet"""
@@ -25,7 +24,7 @@ class Tweet:
 
 
 class TwitterAPI:
-    """Extended API for Twitter database operations with timeline support"""
+    """API for interacting with Twitter MySQL database"""
 
     def __init__(self, host: str, user: str, password: str, database: str, autocommit: bool = False):
         self.host = host
@@ -33,14 +32,11 @@ class TwitterAPI:
         self.password = password
         self.database = database
         self.autocommit = autocommit
-
-        # For quicker picking of random users, get min and max user ids
+        # For quicker picking of random users, store min and max user ids
         self.min_user_id = None
         self.max_user_id = None
-
         self.connection = None
         self.cursor = None
-
         # Profiling
         self.profile_call_count = 0
         self.profile_start_time = None
@@ -59,7 +55,7 @@ class TwitterAPI:
                                  ORDER BY t.tweet_ts DESC LIMIT 10 \
                                  """
 
-        # Query to get a random user from either TWEET or FOLLOWS table
+        # Query to get a random user
         self._get_random_user_sql = """
                                     SELECT DISTINCT user_id
                                     FROM TWEET
@@ -79,8 +75,6 @@ class TwitterAPI:
                 database=self.database,
                 autocommit=self.autocommit,
             )
-
-            # Reuse a single cursor for all operations
             self.cursor = self.connection.cursor()
 
             # Cache user_id bounds for quicker random id generation
@@ -91,7 +85,7 @@ class TwitterAPI:
             self.min_user_id = row[0]
             self.max_user_id = row[1]
 
-            # Start profiling
+            # profiling
             self.profile_start_time = time.time()
             self.profile_call_count = 0
             self.timeline_call_count = 0
@@ -132,9 +126,7 @@ class TwitterAPI:
             return None
 
     def get_home_timeline(self, user_id: int) -> Optional[List[Tweet]]:
-        """
-        Retrieve the home timeline for a given user. Returns a list of Tweet objects.
-        """
+        """Retrieve the home timeline for a given user. Returns a list of Tweet objects."""
         try:
             self.cursor.execute(self._get_timeline_sql, (user_id,))
             rows = self.cursor.fetchall()
@@ -160,9 +152,7 @@ class TwitterAPI:
 
     def get_random_user(self) -> Optional[int]:
         """
-        Get a random user ID from the TWEET table.
-        Database-specific implementation, API-level abstraction.
-        """
+        Get a random user ID from the Tweet table"""
         if self.min_user_id is None or self.max_user_id is None:
             return None
 
@@ -190,9 +180,7 @@ class TwitterAPI:
         )
 
     def commit(self) -> bool:
-        """
-        Commit pending transactions.
-        """
+        """Commit pending transactions. """
         try:
             if self.connection and not self.autocommit:
                 self.connection.commit()
@@ -201,9 +189,7 @@ class TwitterAPI:
             return False
 
     def get_profile_stats(self, call_type: str) -> dict:
-        """
-        Get profiling statistics for API calls
-        """
+        """Get profiling statistics for API calls"""
         if self.profile_start_time is None:
             return {"calls_per_sec": 0.0, "total_calls": 0}
 

@@ -24,7 +24,7 @@ class TimelineRetriever:
         Retrieve home timelines for random users. Returns a tuple of
         (successful_retrievals, failed_retrievals, empty_timelines, elapsed_time)
         """
-        print(f"Starting timeline retrieval for {num_retrievals} random users...")
+        print(f"Starting timeline retrieval for {num_retrievals} random users")
 
         self.timelines_retrieved = 0
         self.timelines_failed = 0
