@@ -116,7 +116,7 @@ def main():
         loader.load_tweets(CSV_FILE)
 
     except KeyboardInterrupt:
-        print("\n\n⚠️  Program interrupted by user")
+        print("\n\n Program interrupted by user")
     except FileNotFoundError as e:
         print(f"\nCould not find file - {e}")
     finally:
