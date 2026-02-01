@@ -22,7 +22,6 @@ try:
 except ImportError:
     pass
 
-
 class TimelineRetriever:
     """Driver class for retrieving user home timelines from Redis"""
 
@@ -70,7 +69,7 @@ class TimelineRetriever:
                         self.total_tweets += len(timeline)
 
         except KeyboardInterrupt:
-            print("\n\n⚠️  Retrieval interrupted by user!")
+            print("\n\n⚠Retrieval interrupted by user!")
             print(f"Retrieved {self.timelines_retrieved} timelines before interrupt")
         finally:
             # Always print results, even if interrupted
@@ -81,9 +80,7 @@ class TimelineRetriever:
         """Print retrieval results and profiling stats"""
         total = self.timelines_retrieved + self.timelines_failed
 
-        print(f"\n{'=' * 60}")
         print("TIMELINE RETRIEVAL RESULTS")
-        print("=" * 60)
         print(f"Successfully retrieved:  {self.timelines_retrieved}")
         print(f"Failed retrievals:       {self.timelines_failed}")
 
@@ -92,8 +89,6 @@ class TimelineRetriever:
         print(f"\nTime elapsed:            {api_stats['elapsed_time']:.2f} seconds")
         if self.timelines_retrieved > 0:
             print(f"getTimeline calls/sec:   {api_stats['calls_per_sec']:.2f}")
-        print("=" * 60)
-
 
 def main():
     """Main driver function"""
@@ -120,7 +115,6 @@ def main():
         print("\n\nProgram interrupted by user")
     finally:
         db_api.disconnect()
-
 
 if __name__ == "__main__":
     main()

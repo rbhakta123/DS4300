@@ -24,7 +24,6 @@ try:
 except ImportError:
     pass
 
-
 class TweetLoader:
     """Driver class for loading tweets into Redis"""
 
@@ -68,7 +67,7 @@ class TweetLoader:
                 if i % 10000 == 0:
                     print(f"  Processed {i} tweets...")
         except KeyboardInterrupt:
-            print("\n\n⚠️  Loading interrupted by user!")
+            print("\n\nLoading interrupted by user!")
             print(f"Processed {self.tweets_loaded + self.tweets_failed} tweets before interrupt")
         finally:
             # Always print results, even if interrupted
@@ -78,10 +77,7 @@ class TweetLoader:
 
     def _print_results(self) -> None:
         """Print loading results, and profiling stats"""
-
-        print("\n" + "=" * 60)
         print("TWEET LOADING RESULTS")
-        print("=" * 60)
         print(f"Successfully loaded:    {self.tweets_loaded}")
         print(f"Failed to load:         {self.tweets_failed}")
 
@@ -89,8 +85,6 @@ class TweetLoader:
         api_stats = self.db_api.get_profile_stats("post_tweet")
         print(f"\nTime elapsed:           {api_stats['elapsed_time']:.2f} seconds")
         print(f"post_tweet calls/sec:   {api_stats['calls_per_sec']:.2f}")
-        print("=" * 60)
-
 
 def main():
     # Redis configuration
@@ -113,26 +107,20 @@ def main():
 
     try:
         # First, load the follows relationships
-        print("\n" + "=" * 60)
-        print("PHASE 1: Loading Follows Relationships")
-        print("=" * 60)
+        print("Loading Follows Relationships")
         db_api.load_follows_from_csv(FOLLOWS_FILE)
 
         # Then load the tweets
-        print("\n" + "=" * 60)
-        print("PHASE 2: Loading Tweets")
-        print("=" * 60)
+        print("Loading Tweets")
         loader = TweetLoader(db_api)
         loader.load_tweets(CSV_FILE)
 
     except KeyboardInterrupt:
         print("\n\n⚠️  Program interrupted by user")
     except FileNotFoundError as e:
-        print(f"\n❌ Error: Could not find file - {e}")
-        print("Please ensure both tweet.csv and follows.csv are in the hw1_data directory")
+        print(f"\nCould not find file - {e}")
     finally:
         db_api.disconnect()
-
 
 if __name__ == "__main__":
     main()

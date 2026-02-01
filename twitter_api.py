@@ -13,7 +13,6 @@ from datetime import datetime
 import csv
 import random
 
-
 @dataclass
 class Tweet:
     """Data class representing a tweet"""
@@ -24,7 +23,6 @@ class Tweet:
 
     def __repr__(self):
         return f"Tweet(id={self.tweet_id}, user={self.user_id}, ts={self.tweet_ts}, text='{self.tweet_text[:30]}...')"
-
 
 class TwitterAPI:
     """
