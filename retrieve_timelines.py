@@ -9,8 +9,8 @@ Stats:
 Successfully retrieved:  10000
 Failed retrievals:       0
 
-Time elapsed:            11.46 seconds
-getTimeline calls/sec:   872.67
+Time elapsed:            5.48 seconds
+getTimeline calls/sec:   1823.54
 """
 import os
 from typing import Tuple
