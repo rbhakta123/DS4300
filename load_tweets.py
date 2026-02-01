@@ -8,7 +8,6 @@ Author: Ruhan Bhakta
 Stats:
 Successfully loaded:    175173
 Failed to load:         0
-
 Time elapsed:           201.76 seconds
 post_tweet calls/sec:   868.24
 """

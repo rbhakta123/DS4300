@@ -6,11 +6,10 @@ Uses twitter_api.py to interact with Redis.
 Author: Ruhan Bhakta
 
 Stats:
-Successfully retrieved:  10000
+Successfully retrieved:  30000
 Failed retrievals:       0
-
-Time elapsed:            5.17 seconds
-getTimeline calls/sec:   1933.52
+Time elapsed:            9.93 seconds
+getTimeline calls/sec:   3022.23
 """
 import os
 from typing import Tuple
@@ -105,7 +104,7 @@ def main():
         "password": os.getenv("REDIS_PASSWORD"),
     }
 
-    NUM_RETRIEVALS = 10000
+    NUM_RETRIEVALS = 30000
 
     # Connect to Redis
     db_api = TwitterAPI(**REDIS_CONFIG)
@@ -118,7 +117,7 @@ def main():
         # Main retrieval loop
         retriever.retrieve_timelines(NUM_RETRIEVALS)
     except KeyboardInterrupt:
-        print("\n\n⚠Program interrupted by user")
+        print("\n\nProgram interrupted by user")
     finally:
         db_api.disconnect()
 

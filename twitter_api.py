@@ -52,6 +52,10 @@ class TwitterAPI:
         self.tweet_counter_key = "tweet:counter"
         self.users_with_timelines_key = "users_with_timelines"
 
+        # User ID range for random selection
+        self.min_user_id = None
+        self.max_user_id = None
+
     def connect(self) -> bool:
         """Establish connection to Redis."""
         try:
@@ -179,12 +183,56 @@ class TwitterAPI:
             return None
 
     def get_random_user(self) -> Optional[int]:
+        """Get a random user ID from the user ID range"""
         try:
-            user_id = self.redis_client.srandmember(self.users_with_timelines_key)
-            return int(user_id) if user_id is not None else None
+            # If we haven't cached the user range yet, discover it
+            if self.min_user_id is None or self.max_user_id is None:
+                self._discover_user_range()
+
+            # If still no range found, return None
+            if self.min_user_id is None or self.max_user_id is None:
+                return None
+
+            # Generate random user ID from the range (no Redis call needed!)
+            return random.randint(self.min_user_id, self.max_user_id)
         except Exception as e:
             print(f"Error getting random user: {e}")
             return None
+
+    def _discover_user_range(self) -> None:
+        """
+        Discover the min and max user IDs by scanning the followers keys. Called once and cached for subsequent
+        random user selections.
+        """
+        try:
+            # Scan for all followers keys
+            min_id = None
+            max_id = None
+
+            # Use SCAN to iterate through keys matching "followers:*"
+            cursor = 0
+            while True:
+                cursor, keys = self.redis_client.scan(cursor, match="followers:*", count=1000)
+
+                for key in keys:
+                    # Extract user ID from key "followers:{user_id}"
+                    user_id = int(key.split(':')[1])
+
+                    if min_id is None or user_id < min_id:
+                        min_id = user_id
+                    if max_id is None or user_id > max_id:
+                        max_id = user_id
+
+                if cursor == 0:
+                    break
+
+            self.min_user_id = min_id
+            self.max_user_id = max_id
+
+        except Exception as e:
+            print(f"Error discovering user range: {e}")
+            self.min_user_id = None
+            self.max_user_id = None
 
     def is_connected(self) -> bool:
         """Check if Redis connection is active."""
