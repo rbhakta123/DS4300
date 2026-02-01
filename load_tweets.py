@@ -6,11 +6,11 @@ Uses twitter_api.py to interact with Redis.
 Author: Ruhan Bhakta
 
 Stats:
-Successfully loaded:    345160
+Successfully loaded:    175173
 Failed to load:         0
 
-Time elapsed:           354.32 seconds
-post_tweet calls/sec:   974.15
+Time elapsed:           201.76 seconds
+post_tweet calls/sec:   868.24
 """
 import os
 import csv

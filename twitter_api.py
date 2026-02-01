@@ -1,8 +1,8 @@
 """
 DS 4300 HW 1
 filename: twitter_api.py
-API to interact with Redis Twitter database. Uses fanout-on-write with pipelining for efficiency.
-Author: Ruhan Bhakta (Modified for Redis)
+API to interact with Redis Twitter database. Used in load_tweets.py and retrieve_timelines.py
+Author: Ruhan Bhakta
 """
 import time
 import json
@@ -10,6 +10,7 @@ import redis
 from typing import Optional, List, Dict
 from dataclasses import dataclass
 from datetime import datetime
+import csv
 import random
 
 
@@ -28,18 +29,12 @@ class Tweet:
 class TwitterAPI:
     """
     API for interacting with Twitter Redis database.
-
-    Uses fanout-on-write strategy with pipelining:
-    - Tweets are immediately pushed to all followers' home timelines
-    - Uses Redis pipelining to batch follower updates efficiently
-    - Result: Instant timeline reads (just ZREVRANGE + fetch tweets)
     """
 
     def __init__(self, host: str = 'localhost', port: int = 6379, db: int = 0,
                  password: Optional[str] = None, **kwargs):
         """
         Initialize Redis connection parameters.
-        Note: autocommit parameter kept for compatibility but not used (Redis auto-commits)
         """
         self.host = host
         self.port = port
@@ -53,7 +48,7 @@ class TwitterAPI:
         self.profile_start_time = None
         self.timeline_call_count = 0
 
-        # Tweet ID counter - stored in Redis
+        # Tweet ID counter
         self.tweet_counter_key = "tweet:counter"
         self.users_with_timelines_key = "users_with_timelines"
 
@@ -65,13 +60,13 @@ class TwitterAPI:
                 port=self.port,
                 db=self.db,
                 password=self.password,
-                decode_responses=True  # Automatically decode responses to strings
+                decode_responses=True
             )
 
             # Test connection
             self.redis_client.ping()
 
-            # Initialize tweet counter if it doesn't exist
+            # Initialize tweet counter
             if not self.redis_client.exists(self.tweet_counter_key):
                 self.redis_client.set(self.tweet_counter_key, 0)
 
@@ -80,7 +75,7 @@ class TwitterAPI:
             self.profile_call_count = 0
             self.timeline_call_count = 0
 
-            print(f"Successfully connected to Redis at {self.host}:{self.port}")
+            print(f"Successfully connected to Redis")
             return True
 
         except redis.ConnectionError as e:
@@ -98,24 +93,18 @@ class TwitterAPI:
 
     def post_tweet(self, user_id: int, tweet_text: str) -> Optional[int]:
         """
-        Insert a single tweet into Redis.
-
-        Fanout-on-write strategy with denormalization:
-        - Tweet stored as hash at "tweet:{tweet_id}" (for potential other queries)
-        - Complete tweet data (JSON) added to ALL followers' home timelines
-        - Result: Single-command timeline retrieval (no secondary lookups needed)
+        Insert a single tweet into Redis.Tweet stored as hash at "tweet:{tweet_id}". Complete tweet data (JSON) added
+        to all followers' home timelines
         """
         try:
             # Generate unique tweet ID
             tweet_id = self.redis_client.incr(self.tweet_counter_key)
 
-            # Current timestamp (in seconds since epoch for sorting)
+            # Current timestamp
             tweet_ts = time.time()
-
-            # Create pipeline for batch operations
             pipe = self.redis_client.pipeline(transaction=False)
 
-            # Store tweet data as a hash (keeping for backwards compatibility/other queries)
+            # Store tweet data as a hash
             tweet_key = f"tweet:{tweet_id}"
             pipe.hset(tweet_key, mapping={
                 'tweet_id': tweet_id,
@@ -124,7 +113,7 @@ class TwitterAPI:
                 'tweet_text': tweet_text
             })
 
-            # Prepare complete tweet data as JSON for denormalized storage
+            # Prepare complete tweet data as JSON
             tweet_data_json = json.dumps({
                 'tweet_id': tweet_id,
                 'user_id': user_id,
@@ -132,17 +121,15 @@ class TwitterAPI:
                 'tweet_text': tweet_text
             })
 
-            # Add complete tweet data to all followers' home timelines
+            # Add tweet to all followers' home timelines
             followers_key = f"followers:{user_id}"
             followers = self.redis_client.smembers(followers_key)
 
             for follower_id in followers:
                 home_timeline_key = f"home_timeline:{follower_id}"
-                # Store complete tweet data (as JSON string) with timestamp as score
+                # Store complete tweet data with timestamp as score
                 pipe.zadd(home_timeline_key, {tweet_data_json: tweet_ts})
 
-                # Trim timeline to keep only 10 most recent tweets
-                # ZREMRANGEBYRANK removes elements by rank (0-indexed)
                 # Keep elements from rank 0-9 (10 most recent), remove rest
                 pipe.zremrangebyrank(home_timeline_key, 0, -11)
 
@@ -161,40 +148,29 @@ class TwitterAPI:
 
     def get_home_timeline(self, user_id: int) -> Optional[List[Tweet]]:
         """
-        Retrieve the home timeline for a given user.
-        Returns all tweets in the timeline (maximum 10 since timelines are trimmed).
-
-        With denormalized storage: ULTRA FAST - single Redis command gets everything!
-        No secondary lookups needed since complete tweet data is stored in the timeline.
+        Retrieve the home timeline for a given user. Returns all tweets in that user's timeline
         """
         try:
             home_timeline_key = f"home_timeline:{user_id}"
 
-            # Get all tweet data (as JSON strings) sorted by timestamp, descending
-            # Single command retrieves everything - no pipeline needed!
+            # Get all tweet data sorted by timestamp, descending
             tweet_data_list = self.redis_client.zrevrange(home_timeline_key, 0, -1)
-
             self.timeline_call_count += 1
 
             if not tweet_data_list:
                 return []
-
             # Parse JSON and convert to Tweet objects
             tweets = []
+
             for tweet_json in tweet_data_list:
-                try:
-                    data = json.loads(tweet_json)
-                    tweet = Tweet(
-                        tweet_id=int(data['tweet_id']),
-                        user_id=int(data['user_id']),
-                        tweet_ts=datetime.fromtimestamp(data['tweet_ts']),
-                        tweet_text=data['tweet_text']
-                    )
-                    tweets.append(tweet)
-                except (json.JSONDecodeError, KeyError) as e:
-                    # Skip malformed tweet data
-                    print(f"Warning: Skipping malformed tweet data: {e}")
-                    continue
+                data = json.loads(tweet_json)
+                tweet = Tweet(
+                    tweet_id=int(data['tweet_id']),
+                    user_id=int(data['user_id']),
+                    tweet_ts=datetime.fromtimestamp(data['tweet_ts']),
+                    tweet_text=data['tweet_text']
+                )
+                tweets.append(tweet)
 
             return tweets
 
@@ -220,13 +196,6 @@ class TwitterAPI:
         except:
             return False
 
-    def commit(self) -> bool:
-        """
-        Commit pending transactions.
-        Note: Redis doesn't need explicit commits, kept for compatibility.
-        """
-        return True
-
     def get_profile_stats(self, call_type: str) -> dict:
         """Get profiling statistics for API calls."""
         if self.profile_start_time is None:
@@ -251,14 +220,9 @@ class TwitterAPI:
 
     def load_follows_from_csv(self, filename: str) -> int:
         """
-        Load the follows relationships from CSV file.
-        CSV format: follower_id, followee_id
-
-        Uses pipelining for efficient batch loading.
-        Storage: For each user, maintain a set of followers at key "followers:{followee_id}"
+        Load the follows relationships from CSV file. For each user, maintain a set of followers at key
+        "followers:{followee_id}"
         """
-        import csv
-
         follows_loaded = 0
 
         try:
@@ -266,9 +230,8 @@ class TwitterAPI:
 
             with open(filename, 'r', encoding='utf-8') as f:
                 reader = csv.reader(f)
-                # Skip header if present
+                # Skip header
                 next(reader, None)
-
                 # Use pipeline for batch operations
                 pipe = self.redis_client.pipeline(transaction=False)
                 batch_size = 5000

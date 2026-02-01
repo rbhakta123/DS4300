@@ -9,8 +9,8 @@ Stats:
 Successfully retrieved:  10000
 Failed retrievals:       0
 
-Time elapsed:            5.48 seconds
-getTimeline calls/sec:   1823.54
+Time elapsed:            5.17 seconds
+getTimeline calls/sec:   1933.52
 """
 import os
 from typing import Tuple
@@ -98,12 +98,11 @@ class TimelineRetriever:
 
 def main():
     """Main driver function"""
-    # Redis configuration
     REDIS_CONFIG = {
         "host": os.getenv("REDIS_HOST", "localhost"),
         "port": int(os.getenv("REDIS_PORT", 6379)),
         "db": int(os.getenv("REDIS_DB", 0)),
-        "password": os.getenv("REDIS_PASSWORD"),  # None if not set
+        "password": os.getenv("REDIS_PASSWORD"),
     }
 
     NUM_RETRIEVALS = 10000
@@ -119,7 +118,7 @@ def main():
         # Main retrieval loop
         retriever.retrieve_timelines(NUM_RETRIEVALS)
     except KeyboardInterrupt:
-        print("\n\n⚠️  Program interrupted by user")
+        print("\n\n⚠Program interrupted by user")
     finally:
         db_api.disconnect()
 
