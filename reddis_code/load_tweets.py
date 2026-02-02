@@ -1,7 +1,7 @@
 """
 DS 4300 HW 1
 filename: load_tweets.py
-Tweet Loader Driver Program - Reads tweets from a CSV file and inserts them into Redis.
+Tweet Loader Driver - Reads tweets from a CSV file and inserts them into Redis.
 Uses twitter_api.py to interact with Redis.
 Author: Ruhan Bhakta
 
@@ -43,7 +43,7 @@ class TweetLoader:
                 yield int(user_id), tweet_text
 
     def load_tweets(self, filename: str) -> Tuple[int, int, float]:
-        """Load tweets into Redis one at a time"""
+        """Load tweets into Redis"""
         print(f"Starting tweet loading from: {filename}")
 
         self.tweets_loaded = 0
@@ -70,7 +70,6 @@ class TweetLoader:
             print("\n\nLoading interrupted by user!")
             print(f"Processed {self.tweets_loaded + self.tweets_failed} tweets before interrupt")
         finally:
-            # Always print results, even if interrupted
             self._print_results()
 
         return self.tweets_loaded, self.tweets_failed, self.db_api.get_profile_stats("post_tweet")['elapsed_time']
@@ -106,7 +105,7 @@ def main():
         return
 
     try:
-        # First, load the follows relationships
+        # First load the follows relationships
         print("Loading Follows Relationships")
         db_api.load_follows_from_csv(FOLLOWS_FILE)
 

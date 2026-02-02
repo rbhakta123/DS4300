@@ -1,7 +1,7 @@
 """
 DS 4300 HW 1
 filename: retrieve_timelines.py
-Twitter Timeline retrieval Driver - Retrieves home timelines for specified number of random users.
+Twitter Timeline Retrieval Driver - Retrieves home timelines for specified number of random users.
 Uses twitter_api.py to interact with Redis.
 Author: Ruhan Bhakta
 
@@ -72,9 +72,9 @@ class TimelineRetriever:
             print("\n\n⚠Retrieval interrupted by user!")
             print(f"Retrieved {self.timelines_retrieved} timelines before interrupt")
         finally:
-            # Always print results, even if interrupted
             self._print_results()
-        return self.timelines_retrieved, self.timelines_failed, self.empty_timelines, self.db_api.get_profile_stats("timeline")['elapsed_time']
+        return (self.timelines_retrieved, self.timelines_failed, self.empty_timelines,
+                self.db_api.get_profile_stats("timeline")['elapsed_time'])
 
     def _print_results(self) -> None:
         """Print retrieval results and profiling stats"""

@@ -95,7 +95,7 @@ class TwitterAPI:
 
     def post_tweet(self, user_id: int, tweet_text: str) -> Optional[int]:
         """
-        Insert a single tweet into Redis.Tweet stored as hash at "tweet:{tweet_id}". Complete tweet data (JSON) added
+        Insert a single tweet into Redis. Tweet stored as hash at "tweet:{tweet_id}". Complete tweet data added
         to all followers' home timelines
         """
         try:
@@ -131,14 +131,11 @@ class TwitterAPI:
                 home_timeline_key = f"home_timeline:{follower_id}"
                 # Store complete tweet data with timestamp as score
                 pipe.zadd(home_timeline_key, {tweet_data_json: tweet_ts})
-
-                # Keep elements from rank 0-9 (10 most recent), remove rest
+                # Keep 10 most recent tweets, remove rest
                 pipe.zremrangebyrank(home_timeline_key, 0, -11)
-
                 # track users with timelines
                 pipe.sadd(self.users_with_timelines_key, follower_id)
 
-            # Execute all operations in one batch
             pipe.execute()
 
             self.profile_call_count += 1
@@ -207,7 +204,7 @@ class TwitterAPI:
             min_id = None
             max_id = None
 
-            # Use SCAN to iterate through keys matching "followers:*"
+            # iterate through keys matching "followers:*"
             cursor = 0
             while True:
                 cursor, keys = self.redis_client.scan(cursor, match="followers:*", count=1000)
