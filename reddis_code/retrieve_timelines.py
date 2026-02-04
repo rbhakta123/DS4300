@@ -69,7 +69,7 @@ class TimelineRetriever:
                         self.total_tweets += len(timeline)
 
         except KeyboardInterrupt:
-            print("\n\n⚠Retrieval interrupted by user!")
+            print("\n\nRetrieval interrupted by user!")
             print(f"Retrieved {self.timelines_retrieved} timelines before interrupt")
         finally:
             self._print_results()

@@ -180,7 +180,7 @@ class TwitterAPI:
     def get_random_user(self) -> Optional[int]:
         """Get a random user ID from the user ID range"""
         try:
-            # If we haven't cached the user range yet, discover it
+            # Get user_id range if it hasn't been cached yet
             if self.min_user_id is None or self.max_user_id is None:
                 self._discover_user_range()
 
@@ -188,7 +188,7 @@ class TwitterAPI:
             if self.min_user_id is None or self.max_user_id is None:
                 return None
 
-            # Generate random user ID from the range (no Redis call needed!)
+            # Generate random user ID from the range
             return random.randint(self.min_user_id, self.max_user_id)
         except Exception as e:
             print(f"Error getting random user: {e}")
@@ -196,7 +196,7 @@ class TwitterAPI:
 
     def _discover_user_range(self) -> None:
         """
-        Discover the min and max user IDs by scanning the followers keys. Called once and cached for subsequent
+        Get the min and max user IDs by scanning the followers keys. Called once and cached for subsequent
         random user selections.
         """
         try:
@@ -275,7 +275,6 @@ class TwitterAPI:
                 reader = csv.reader(f)
                 # Skip header
                 next(reader, None)
-                # Use pipeline for batch operations
                 pipe = self.redis_client.pipeline(transaction=False)
                 batch_size = 5000
 
